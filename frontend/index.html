@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talkbase GPT-5 Mini AI - Daily Accountability</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f4f6f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+h2 { color: #333; }
+#chat { border: 1px solid #ccc; border-radius: 10px; padding: 15px; height: 350px; width: 100%; max-width: 600px; overflow-y: auto; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 10px; }
+.message { margin: 10px 0; padding: 8px 12px; border-radius: 12px; max-width: 80%; }
+.user { background: #d0e7ff; align-self: flex-end; color: #003366; }
+.ai { background: #e0ffe0; align-self: flex-start; color: #006600; }
+#tasks { width: 100%; max-width: 600px; margin-bottom: 10px; }
+.task { padding: 8px 12px; background: #fff5e6; border-radius: 10px; margin: 5px 0; cursor: pointer; display: flex; justify-content: space-between; }
+.task.completed { background: #d0ffd0; text-decoration: line-through; color: #555; }
+#progress { width: 100%; max-width: 600px; height: 20px; background: #eee; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+#progressBar { height: 100%; width: 0%; background: #4caf50; transition: width 0.3s; }
+#inputArea { display: flex; width: 100%; max-width: 600px; margin-top: 10px; }
+#userInput { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ccc; outline: none; }
+button { padding: 10px 20px; margin-left: 10px; border: none; background: #007bff; color: #fff; border-radius: 20px; cursor: pointer; }
+button:hover { background: #0056b3; }
+</style>
+</head>
+<body>
+
+<h2>Talkbase GPT-5 Mini AI - Daily Accountability</h2>
+<div id="chat"></div>
+<div id="tasks"></div>
+<div id="progress"><div id="progressBar"></div></div>
+
+<div id="inputArea">
+<input type="text" id="userInput" placeholder="Type your message..." />
+<button onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+const chat = document.getElementById('chat');
+const tasksDiv = document.getElementById('tasks');
+const progressBar = document.getElementById('progressBar');
+
+let dailyTasks = [];
+let completedTasks = 0;
+
+function appendMessage(sender, text) {
+  const msg = document.createElement('div');
+  msg.className = 'message ' + sender;
+  msg.textContent = (sender === 'user' ? 'You: ' : 'AI: ') + text;
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function renderTasks() {
+  tasksDiv.innerHTML = '';
+  dailyTasks.forEach((task, index) => {
+    const taskDiv = document.createElement('div');
+    taskDiv.className = 'task' + (task.completed ? ' completed' : '');
+    taskDiv.innerHTML = `<span>${task.text}</span><span>${task.completed ? "✔" : ""}</span>`;
+    taskDiv.onclick = () => toggleTask(index);
+    tasksDiv.appendChild(taskDiv);
+  });
+  updateProgress();
+}
+
+function toggleTask(index) {
+  if (!dailyTasks[index].completed) completedTasks++;
+  else completedTasks--;
+  dailyTasks[index].completed = !dailyTasks[index].completed;
+  renderTasks();
+}
+
+function updateProgress() {
+  const progress = dailyTasks.length ? (completedTasks / dailyTasks.length) * 100 : 0;
+  progressBar.style.width = progress + '%';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  appendMessage('user', text);
+  input.value = '';
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, tasks: dailyTasks })
+    });
+    const data = await response.json();
+    appendMessage('ai', data.reply);
+    if (data.newTasks) {
+      dailyTasks = data.newTasks.map(t => ({ text: t, completed: false }));
+      completedTasks = 0;
+      renderTasks();
+    }
+  } catch (err) {
+    appendMessage('ai', "Sorry, something went wrong.");
+    console.error(err);
+  }
+}
+
+appendMessage('ai', "Hi! I'm your Talkbase GPT-5 Mini AI. Type 'daily tasks' to generate tasks or ask for motivation/progress.");
+</script>
+
+</body>
+</html>
